@@ -1,0 +1,8 @@
+[
+  {"title": "Data Scientist", "desc": "Python, Machine Learning, Deep Learning, TensorFlow, SQL"},
+  {"title": "Cloud Engineer", "desc": "AWS, Docker, Kubernetes, CI/CD, Linux"},
+  {"title": "Frontend Developer", "desc": "React, JavaScript, HTML, CSS, Node.js"},
+  {"title": "DevOps Engineer", "desc": "Linux, Docker, Jenkins, Kubernetes, AWS"},
+  {"title": "AI Researcher", "desc": "Deep Learning, NLP, PyTorch, TensorFlow, Research"},
+  {"title": "Business Analyst", "desc": "Excel, SQL, Data Visualization, Power BI, Tableau"}
+]

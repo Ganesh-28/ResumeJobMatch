@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Job Matcher - Resume to Jobs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .progress-bar {
+            transition: width 0.8s ease-in-out;
+        }
+        .skill-tag {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f4;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .job-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .job-card:hover {
+            border-left-color: #667eea;
+            background-color: #f8fafc;
+        }
+        .source-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg shadow-lg">
+        <div class="container mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-3xl font-bold text-white flex items-center">
+                    <i class="fas fa-robot mr-3 text-4xl"></i>
+                    AI Job Matcher
+                </h1>
+                <div class="text-white text-sm bg-white bg-opacity-20 px-4 py-2 rounded-full">
+                    <i class="fas fa-search mr-2"></i>
+                    Resume → Skills → Jobs
+                </div>
+            </div>
+            <p class="text-blue-100 mt-2 text-lg">Upload your resume and discover personalized job opportunities</p>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Upload Section -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8 card-hover transition-all duration-300">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-cloud-upload-alt mr-3 text-blue-600 text-3xl"></i>
+                Upload Your Resume
+            </h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors duration-300" 
+                 id="dropZone">
+                <div id="uploadContent">
+                    <i class="fas fa-file-pdf text-6xl text-red-400 mb-4"></i>
+                    <p class="text-xl text-gray-700 mb-4 font-medium">Drag and drop your resume here</p>
+                    <p class="text-gray-500 mb-6">or click the button below to browse</p>
+                    <input type="file" id="resumeInput" accept=".pdf" class="hidden">
+                    <button onclick="document.getElementById('resumeInput').click()" 
+                            class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg font-semibold transition duration-300 transform hover:scale-105 shadow-lg">
+                        <i class="fas fa-plus mr-2"></i>
+                        Choose PDF File
+                    </button>
+                    <p class="text-sm text-gray-500 mt-4">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Only PDF files are supported • Maximum 10MB
+                    </p>
+                </div>
+                
+                <div id="loadingContent" class="hidden">
+                    <div class="loading-spinner mb-4"></div>
+                    <p class="text-xl text-gray-700 mb-2 font-medium">Analyzing your resume...</p>
+                    <p class="text-gray-500">
+                        <i class="fas fa-cog fa-spin mr-2"></i>
+                        Extracting skills and finding matching jobs
+                    </p>
+                    <div class="mt-4 text-sm text-gray-400">
+                        This usually takes 10-15 seconds
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden">
+            <!-- Skills Section -->
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8 card-hover transition-all duration-300">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-cogs mr-3 text-green-600 text-3xl"></i>
+                        Extracted Skills
+                    </h3>
+                    <span id="skillsCount" class="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold"></span>
+                </div>
+                <div id="skillsList" class="flex flex-wrap gap-3"></div>
+            </div>
+
+            <!-- Role Matches Section -->
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8 card-hover transition-all duration-300">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-bullseye mr-3 text-purple-600 text-3xl"></i>
+                    Recommended Job Roles
+                </h3>
+                <div id="roleMatches" class="space-y-4"></div>
+            </div>
+
+            <!-- Job Listings Section -->
+            <div class="bg-white rounded-xl shadow-lg p-8 card-hover transition-all duration-300">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-briefcase mr-3 text-indigo-600 text-3xl"></i>
+                        Live Job Opportunities
+                    </h3>
+                    <span id="jobsCount" class="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full text-sm font-bold"></span>
+                </div>
+                <div id="jobListings" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div id="errorSection" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-3 text-xl mt-1"></i>
+                <div>
+                    <h4 class="text-lg font-semibold text-red-800 mb-2">Oops! Something went wrong</h4>
+                    <p id="errorMessage" class="text-red-700 mb-2"></p>
+                    <p id="errorSuggestion" class="text-red-600 text-sm"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="hidden bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-green-600 mr-3 text-xl"></i>
+                <div>
+                    <h4 class="text-lg font-semibold text-green-800">Success!</h4>
+                    <p id="successText" class="text-green-700"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="mb-2">
+                <i class="fas fa-robot mr-2"></i>
+                AI Job Matcher - Connecting Skills to Opportunities
+            </p>
+            <p class="text-gray-400 text-sm">
+                Powered by advanced resume parsing and real-time job scraping
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const resumeInput = document.getElementById('resumeInput');
+        const uploadContent = document.getElementById('uploadContent');
+        const loadingContent = document.getElementById('loadingContent');
+        const results = document.getElementById('results');
+        const errorSection = document.getElementById('errorSection');
+        const successMessage = document.getElementById('successMessage');
+        const dropZone = document.getElementById('dropZone');
+
+        // File input change handler
+        resumeInput.addEventListener('change', function(event) {
+            if (event.target.files.length > 0) {
+                const file = event.target.files[0];
+                if (validateFile(file)) {
+                    uploadResume(file);
+                }
+            }
+        });
+
+        // Drag and drop handlers
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-400', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (validateFile(file)) {
+                    uploadResume(file);
+                }
+            }
+        });
+
+        function validateFile(file) {
+            if (file.type !== 'application/pdf') {
+                showError('Please upload a PDF file only.', 'Other file formats are not supported.');
+                return false;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                showError('File size too large.', 'Please upload a PDF file smaller than 10MB.');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function showLoading() {
+            uploadContent.classList.add('hidden');
+            loadingContent.classList.remove('hidden');
+            results.classList.add('hidden');
+            errorSection.classList.add('hidden');
+            successMessage.classList.add('hidden');
+        }
+
+        function hideLoading() {
+            uploadContent.classList.remove('hidden');
+            loadingContent.classList.add('hidden');
+        }
+
+        function showError(message, suggestion = '') {
+            errorSection.classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorSuggestion').textContent = suggestion;
+            results.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            hideLoading();
+        }
+
+        function showSuccess(message) {
+            successMessage.classList.remove('hidden');
+            document.getElementById('successText').textContent = message;
+            errorSection.classList.add('hidden');
+        }
+
+        function uploadResume(file) {
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('resume', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.error) {
+                    showError(data.error, data.suggestion || '');
+                } else {
+                    showSuccess(data.message);
+                    displayResults(data);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error occurred.', 'Please check your internet connection and try again.');
+                console.error('Upload error:', error);
+            });
+        }
+
+        function displayResults(data) {
+            results.classList.remove('hidden');
+
+            // Display skills
+            displaySkills(data.skills, data.skills_count);
+            
+            // Display role matches
+            displayRoleMatches(data.role_matches);
+            
+            // Display job listings
+            displayJobListings(data.job_listings, data.jobs_count);
+            
+            // Scroll to results
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displaySkills(skills, totalCount) {
+            const skillsList = document.getElementById('skillsList');
+            const skillsCount = document.getElementById('skillsCount');
+            
+            skillsList.innerHTML = '';
+            skillsCount.textContent = `${totalCount} skills found`;
+
+            skills.forEach((skill, index) => {
+                const skillTag = document.createElement('span');
+                skillTag.className = 'skill-tag bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold border border-blue-200';
+                skillTag.style.animationDelay = `${index * 0.1}s`;
+                skillTag.innerHTML = `<i class="fas fa-code mr-1"></i>${skill}`;
+                skillsList.appendChild(skillTag);
+            });
+        }
+
+        function displayRoleMatches(matches) {
+            const roleMatches = document.getElementById('roleMatches');
+            roleMatches.innerHTML = '';
+
+            if (!matches || matches.length === 0) {
+                roleMatches.innerHTML = '<p class="text-gray-500 text-center py-8">No role matches found.</p>';
+                return;
+            }
+
+            matches.forEach(match => {
+                const roleCard = document.createElement('div');
+                roleCard.className = 'border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-300 bg-gradient-to-r from-white to-gray-50';
+                
+                const scoreColor = match.score >= 70 ? 'green' : match.score >= 50 ? 'yellow' : 'red';
+                const scoreColorClass = match.score >= 70 ? 'bg-green-500' : match.score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                const scoreBgClass = match.score >= 70 ? 'bg-green-100' : match.score >= 50 ? 'bg-yellow-100' : 'bg-red-100';
+                const scoreTextClass = match.score >= 70 ? 'text-green-800' : match.score >= 50 ? 'text-yellow-800' : 'text-red-800';
+                
+                roleCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h4 class="text-xl font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-briefcase mr-2 text-purple-600"></i>
+                            ${match.title}
+                        </h4>
+                        <div class="text-right">
+                            <div class="flex items-center mb-2">
+                                <span class="text-3xl font-bold ${scoreTextClass}">${match.score}%</span>
+                                <span class="ml-2 ${scoreBgClass} ${scoreTextClass} px-2 py-1 rounded-full text-xs font-bold">
+                                    MATCH
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center text-sm text-gray-600 mb-3">
+                        <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                        <span>Required Skills Match: ${match.required_matches}/${match.total_required}</span>
+                        <span class="ml-4">
+                            <i class="fas fa-star mr-2 text-yellow-500"></i>
+                            Preferred Skills: ${match.preferred_matches}
+                        </span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                        <div class="${scoreColorClass} h-3 rounded-full progress-bar" style="width: ${match.score}%"></div>
+                    </div>
+                `;
+                
+                roleMatches.appendChild(roleCard);
+            });
+        }
+
+        function displayJobListings(jobs, totalCount) {
+            const jobListings = document.getElementById('jobListings');
+            const jobsCount = document.getElementById('jobsCount');
+            
+            jobListings.innerHTML = '';
+            jobsCount.textContent = `${totalCount} opportunities`;
+
+            if (!jobs || jobs.length === 0) {
+                jobListings.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-search text-4xl mb-4"></i>
+                        <p class="text-lg">No job listings found at the moment.</p>
+                        <p class="text-sm">Try updating your resume with more specific skills.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            jobs.forEach((job, index) => {
+                const jobCard = document.createElement('div');
+                jobCard.className = 'job-card border border-gray-200 rounded-lg p-6 transition-all duration-300 bg-white';
+                
+                const sourceColors = {
+                    'Internshala': 'bg-blue-500 text-white',
+                    'Naukri': 'bg-purple-500 text-white', 
+                    'Indeed': 'bg-green-500 text-white'
+                };
+                
+                const sourceColor = sourceColors[job.source] || 'bg-gray-500 text-white';
+                
+                jobCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h4 class="text-lg font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors">
+                                ${job.title}
+                            </h4>
+                            <p class="text-gray-600 flex items-center mb-2">
+                                <i class="fas fa-building mr-2"></i>
+                                ${job.company}
+                            </p>
+                        </div>
+                        <span class="source-badge ${sourceColor} px-3 py-1 rounded-full ml-4">
+                            ${job.source}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-clock mr-1"></i>
+                            Posted recently
+                        </div>
+                        ${job.link ? `
+                            <a href="${job.link}" target="_blank" rel="noopener noreferrer" 
+                               class="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition duration-300 transform hover:scale-105">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                Apply Now
+                            </a>
+                        ` : `
+                            <span class="text-gray-400 text-sm">
+                                <i class="fas fa-link mr-1"></i>
+                                Link not available
+                            </span>
+                        `}
+                    </div>
+                `;
+                
+                jobListings.appendChild(jobCard);
+            });
+        }
+
+        // Add some nice animations when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a subtle animation to the header
+            const header = document.querySelector('header');
+            header.style.opacity = '0';
+            header.style.transform = 'translateY(-20px)';
+            
+            setTimeout(() => {
+                header.style.transition = 'all 0.6s ease-out';
+                header.style.opacity = '1';
+                header.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
+</body>
+</html>
